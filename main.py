@@ -67,7 +67,7 @@ class tkinterApp(tk.Tk):
 		self.frames = {}
 		self.wm_iconbitmap('Image/logo.ico')
 		self.title=("Analyse vidéo")
-
+        
 
 		self.parameters = { #different parameters
 			"saveFolder" : os.getcwd() + "Result\\"
@@ -85,9 +85,7 @@ class tkinterApp(tk.Tk):
 		# iterating through a tuple consisting
 		# of the different page layouts
 		for F in (Menu, Statistics, Parameters):
-
 			frame = F(container, self)
-
 			# initializing frame of that object from
 			# Menu, Statistics, Parameters respectively with
 			# for loop
