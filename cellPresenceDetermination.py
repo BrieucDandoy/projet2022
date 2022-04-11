@@ -103,19 +103,23 @@ def getInteractionArray(BF_imgPath, leukemicCellsImgPath, tCellsImgPath):
     interactionPositions = assignCenterToPositionArray(tCellsCenters, positionsWhereLeukemicCellsAre, RECTANGLE_SIZE, centerColumnX, isTcell=True)
     interactionPositions = [x[0] for x in interactionPositions]
     print(interactionPositions)
+    stats = {
+    "numberOfHoles" : len(positionArray[0]) * len(positionArray),
+    "numberOfValidLeukemicCells" : len(leukemicCellsCenters),
+    "numberOfValidTCells" : len(tCellsCenters),
+    "numberOfinteractions" : len(interactionPositions)}
 
-    numberOfHoles = len(positionArray[0]) * len(positionArray)
-    numberOfValidLeukemicCells = len(leukemicCellsCenters)
-    numberOfValidTCells = len(tCellsCenters)
-    numberOfinteractions = len(interactionPositions)
-    pourcentageOfValidLeukemicCells = (numberOfValidLeukemicCells / numberOfHoles) * 100 
-    pourcentageOfValidTCells = (numberOfValidTCells / numberOfHoles) * 100 
-    pourcentageOfInteractions = (numberOfinteractions / numberOfHoles) * 100 
+    stats["pourcentageOfValidLeukemicCells"] = (stats["numberOfValidLeukemicCells"] / stats["numberOfHoles"]) * 100
+    stats["pourcentageOfValidTCells"] = (stats["numberOfValidTCells"] / stats["numberOfHoles"]) * 100
+    stats["pourcentageOfInteractions"] = (stats["numberOfinteractions"] / stats["numberOfHoles"]) * 100 
 
-    print("\033[32mThere is a total of {} holes to be filled, which {} ({:.2f}%) were filled with Leukemic cells and {} ({:.2f}%) were filled with T cells which results in {} ({:.2f}%) interaction zones\033[0m".format(
-        numberOfHoles, numberOfValidLeukemicCells, pourcentageOfValidLeukemicCells, numberOfValidTCells, pourcentageOfValidTCells, numberOfinteractions, pourcentageOfInteractions))
 
-    return [interactionPositions, numberOfHoles]
+
+
+    #print("\033[32mThere is a total of {} holes to be filled, which {} ({:.2f}%) were filled with Leukemic cells and {} ({:.2f}%) were filled with T cells which results in {} ({:.2f}%) interaction zones\033[0m".format(
+     #   numberOfHoles, numberOfValidLeukemicCells, pourcentageOfValidLeukemicCells, numberOfValidTCells, pourcentageOfValidTCells, numberOfinteractions, pourcentageOfInteractions))
+
+    return [interactionPositions, stats]
 
 if __name__ == "__main__" :
     BF_imgPath = "Data/Brightfield/BF no cells.jpg"

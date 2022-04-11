@@ -1,5 +1,6 @@
+from re import L
 import tkinter as tk
-from tkinter import ttk
+from tkinter import mainloop, ttk
 from tkinter import filedialog
 import os
 import matplotlib
@@ -12,6 +13,8 @@ from matplotlib.backends.backend_tkagg import (
 )
 import numpy as np
 from functools import partial
+from cellPresenceDetermination import getInteractionArray
+
 
 
 LARGEFONT =("Verdana", 35)
@@ -25,12 +28,40 @@ class tkinterApp(tk.Tk):
 			for file in files:
 				fichier = os.path.join(root,file)
 				if fichier[-3:]=="png":
-					#self.list_of_files.append(os.path.join(root,file))
 					self.list_of_files.append(file)
 	
 
+
+	def BrowseBrightfield(self):
+		self.folderBrightfield = filedialog.askopenfilename (initialdir = "/",title = "Selectionner un dossier")
+	def BrowseLeukemicCell(self):
+		self.folderLeukemicCell = filedialog.askopenfilename (initialdir = "/",title = "Select the last image of the leukemic Cells")
+	def BrowseTCell(self):
+		self.folderTCells = filedialog.askopenfilename (initialdir = "/",title = "Select the last image of the Tcells")
+
+	def StartAnalysis(self):
+		try:
+			self.interactionPositions, self.stats =getInteractionArray(self.folderBrightfield,self.folderLeukemicCell,self.folderTCells)
+		except:
+			self.PopUp("Error","An error occured during the analysis")
+		#Statistics.updateLabels(Statitics,controller = self)
+		self.frames[Statistics].updateLabels(controller = self)
+
+	def ResetImgDir(self):
+		self.folderBrightfield = ""
+		self.folderBrightfield = ""
+		self.folderTCells = ""
+		self.PopUp("Reset","Images directories have been reset")
+
+
+	def PopUp(self,titre,message):
+		tk.messagebox.showinfo(titre,message)
+
+
+
+
+
 	def changeTheme(self,text,**kwargs):
-		print(len(text))
 		self.styleApp.theme_use(text)
 
 
@@ -78,11 +109,14 @@ class tkinterApp(tk.Tk):
 		tk.Tk.__init__(self, *args, *args)
 		
 		self.folderVid =''
+		self.folderBrightfield =''
+		self.folderLeukemicCell =''
+		self.folderTCells =''
 		self.list_of_files = []
 		self.frames = {}
 		self.wm_iconbitmap('Image/logo.ico')
 		self.title=("Analyse vidéo")
-		self.geometry("1000x600")
+		self.geometry("800x500")
 
 		self.parameters = { #different parameters
 			"saveFolder" : os.getcwd() + "Result\\"
@@ -95,6 +129,8 @@ class tkinterApp(tk.Tk):
 			self.tk.call("source", "Themes/"+i+"/"+i+".tcl")
 
 		self.styleApp.theme_use("radiance")
+		self.dic = {}
+		self.interactionPositions = []
 
 
 
@@ -119,7 +155,6 @@ class tkinterApp(tk.Tk):
 			self.frames[F] = frame
 
 			
-
 		self.show_frame(Menu)
 
 	# to display the current frame passed as
@@ -128,7 +163,7 @@ class tkinterApp(tk.Tk):
 		for F in self.frames.values():
 			F.grid_forget()
 		frame = self.frames[cont]
-		frame.grid(row = 0, column = 0, sticky ="")
+		frame.grid(row = 0, column = 0, sticky ="WN")
 
 # first window frame Menu
 
@@ -154,7 +189,7 @@ class Menu(tk.Frame):
 		#buttonDirAdd.grid(row=2,column=4 ,padx=10, pady=10,sticky='w')
 
 
-		buttonReset =  ttk.Button(self, text ="Reset", command = partial(controller.resetList))
+		buttonReset =  ttk.Button(self, text ="Reset", command = partial(controller.ResetImgDir))
 		buttonReset.grid(row = 3, column = 5, padx = 10, pady = 10,sticky='w')
 
 
@@ -168,19 +203,40 @@ class Menu(tk.Frame):
 		buttonParameters = ttk.Button(self, text ="Parameters", command = partial(controller.show_frame,Parameters))
 		buttonParameters.grid(row = 3, column = 1, padx = 10, pady = 10,sticky='w')
 
-		buttonStartProg = ttk.Button(self,text="Start analysis")
+		buttonStartProg = ttk.Button(self,text="Start analysis", command = partial(controller.StartAnalysis))
 		buttonStartProg.grid(row=2,column=5,padx=10,pady=10,sticky='w')
 
+
+		buttonBrightfield = ttk.Button(self,text="Choose the folder with empty cells",command=partial(controller.BrowseBrightfield))
+		buttonBrightfield.grid(row=1,column=6,padx=10,pady=10,sticky='w')
+
+		buttonLeukemicCells = ttk.Button(self,text="Choose the LAST image with leukemic cells", command=partial(controller.BrowseLeukemicCell))
+		buttonLeukemicCells.grid(row=2,column=6,padx=10,pady=10,sticky='w')
+
+		buttonTcells = ttk.Button(self,text="Choose the LAST image with T-cells",command = partial(controller.BrowseTCell))
+		buttonTcells.grid(row=3,column=6,padx=10,pady=10,sticky='w')
+
+
+
+
 		buttonSaveResult = ttk.Button(self,text="Save analysis")
-		buttonSaveResult.grid(row = 6, column = 5 , padx = 10 , pady = 10 ,sticky='w')
+		buttonSaveResult.grid(row = 4, column = 5 , padx = 10 , pady = 10 ,sticky='w')
 
 		buttonQuit = ttk.Button(self,text="Quit" , style = 'BW.TButton' ,command=controller.Close)
-		buttonQuit.grid(row=7,column = 5, padx = 10 ,pady = 10 ,sticky='w')
+		buttonQuit.grid(row=4,column = 1, padx = 10 ,pady = 10 ,sticky='w')
 
 
 # second window frame Statistics
 class Statistics(tk.Frame):
-	
+
+	def updateLabels(self,controller):
+		j=1
+		for x,y in controller.stats.items():
+			ttk.Label(self,text = x+" : "+str(round(y,2))).grid(row = j, column = 5, padx =10, pady = 10,sticky='w')
+			j+=1
+
+
+
 	def __init__(self, parent, controller):
 
 
@@ -188,8 +244,8 @@ class Statistics(tk.Frame):
 		#label = ttk.Label(self, text ="Statistics", font = LARGEFONT)
 		#label.grid(row = 0, column = 4, padx = 10, pady = 10,sticky='w')
 
-		buttonPlot= ttk.Button(self, text="Plot graph",command = partial(controller.pltGraphOutside,np.arange(1,4),np.arange(1,4),"VarTheme"))
-		buttonPlot.grid(row = 1, column = 4, padx =10, pady = 10,sticky='w')
+		#buttonPlot= ttk.Button(self, text="Plot graph",command = partial(controller.pltGraphOutside,np.arange(1,4),np.arange(1,4),"VarTheme"))
+		#buttonPlot.grid(row = 1, column = 4, padx =10, pady = 10,sticky='w')
 
 		buttonVarTheme=ttk.Button(self, text="Print files directory", command = controller.PrintFilesDir)
 		buttonVarTheme.grid(row=2, column = 4, padx = 10, pady = 10,sticky='w')
@@ -205,7 +261,7 @@ class Statistics(tk.Frame):
 		buttonParameters.grid(row = 3, column = 1, padx = 10, pady = 10,sticky='w')
 
 		buttonQuit = ttk.Button(self,text="Quit" , style = 'BW.TButton' ,command=controller.Close)
-		buttonQuit.grid(row=3,column = 4, padx = 10 ,pady = 10 ,sticky='w')
+		buttonQuit.grid(row=4,column = 1, padx = 10 ,pady = 10 ,sticky='w')
 
 
 
@@ -240,16 +296,16 @@ class Parameters(tk.Frame):
 
 		
 		buttonQuit = ttk.Button(self,text="Quit" , style = 'BW.TButton' ,command=controller.Close)
-		buttonQuit.grid(row=7,column = 4, padx = 10 ,pady = 10 ,sticky='w')
+		buttonQuit.grid(row=4,column = 1, padx = 10 ,pady = 10 ,sticky='w')
 
 
 		label = ttk.Label(self, text ="Change Theme")
-		label.grid(row = 5, column = 4, padx = 10, pady = 10,sticky='w')
+		label.grid(row = 3, column = 4, padx = 10, pady = 10,sticky='w')
 
 		self.VarTheme = tk.StringVar(self)
 		self.VarTheme.set(controller.listeOfThemes[0])
 		buttonTheme = ttk.OptionMenu(self,self.VarTheme,*controller.listeOfThemes, command = controller.changeTheme)
-		buttonTheme.grid(row=6,column = 4, padx = 10 ,pady = 10 ,sticky='w')
+		buttonTheme.grid(row=4,column = 4, padx = 10 ,pady = 10 ,sticky='w')
 # Driver Code
 
 app = tkinterApp()
