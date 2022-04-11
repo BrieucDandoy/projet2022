@@ -52,6 +52,7 @@ def hasValueBetween(arr, value, thresh):
     return [bool, i]
 
 def printPositionArray(arr):
+    f = open("pixelToCoord.csv",'w')
     y = 0
     str = ''
     for i in range(19) : str += "   |     {:2d}    ".format(i)
@@ -61,8 +62,18 @@ def printPositionArray(arr):
         y += 1
         for point in line:
             if(type(point) == type(0)) : point = (-1,-1)
-            strLine += "({:4d}, {:4d}) : ".format(point[0], point[1])
+            strLine += "({:4d}, {:4d}) ; ".format(point[0], point[1])
         print(strLine)
+        f.write(strLine[5:] + "\n")
+    f.close()
+
+
+
+
+
+
+
+
 
 def isSameColor(c1, c2):
     return (c1[0] == c2[0] and c1[1] == c2[1] and c1[2] == c2[2])

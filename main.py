@@ -182,15 +182,13 @@ class Menu(tk.Frame):
 
 		# putting the button in its place by
 		# using grid
-		buttonDir = ttk.Button(self,text = "New Directory",command = partial(controller.browseFiles, True))
-		buttonDir.grid(row=1,column=5 ,padx=10, pady=10,sticky='w')
 
 		#buttonDirAdd = ttk.Button(self,text = "Add Directory", command = partial(controller.browseFiles,False))
 		#buttonDirAdd.grid(row=2,column=4 ,padx=10, pady=10,sticky='w')
 
 
 		buttonReset =  ttk.Button(self, text ="Reset", command = partial(controller.ResetImgDir))
-		buttonReset.grid(row = 3, column = 5, padx = 10, pady = 10,sticky='w')
+		buttonReset.grid(row = 2, column = 5, padx = 10, pady = 10,sticky='w')
 
 
 		buttonStatistics = ttk.Button(self, text ="Statistics", command = partial(controller.show_frame,Statistics))
@@ -204,7 +202,7 @@ class Menu(tk.Frame):
 		buttonParameters.grid(row = 3, column = 1, padx = 10, pady = 10,sticky='w')
 
 		buttonStartProg = ttk.Button(self,text="Start analysis", command = partial(controller.StartAnalysis))
-		buttonStartProg.grid(row=2,column=5,padx=10,pady=10,sticky='w')
+		buttonStartProg.grid(row=1,column=5,padx=10,pady=10,sticky='w')
 
 
 		buttonBrightfield = ttk.Button(self,text="Choose the folder with empty cells",command=partial(controller.BrowseBrightfield))
@@ -219,8 +217,8 @@ class Menu(tk.Frame):
 
 
 
-		buttonSaveResult = ttk.Button(self,text="Save analysis")
-		buttonSaveResult.grid(row = 4, column = 5 , padx = 10 , pady = 10 ,sticky='w')
+		#buttonSaveResult = ttk.Button(self,text="Save analysis")
+		#buttonSaveResult.grid(row = 4, column = 5 , padx = 10 , pady = 10 ,sticky='w')
 
 		buttonQuit = ttk.Button(self,text="Quit" , style = 'BW.TButton' ,command=controller.Close)
 		buttonQuit.grid(row=4,column = 1, padx = 10 ,pady = 10 ,sticky='w')
@@ -247,8 +245,8 @@ class Statistics(tk.Frame):
 		#buttonPlot= ttk.Button(self, text="Plot graph",command = partial(controller.pltGraphOutside,np.arange(1,4),np.arange(1,4),"VarTheme"))
 		#buttonPlot.grid(row = 1, column = 4, padx =10, pady = 10,sticky='w')
 
-		buttonVarTheme=ttk.Button(self, text="Print files directory", command = controller.PrintFilesDir)
-		buttonVarTheme.grid(row=2, column = 4, padx = 10, pady = 10,sticky='w')
+		#buttonVarTheme=ttk.Button(self, text="Print files directory", command = controller.PrintFilesDir)
+		#buttonVarTheme.grid(row=2, column = 4, padx = 10, pady = 10,sticky='w')
 
 
 		buttonMenu = ttk.Button(self, text ="Menu",command = partial(controller.show_frame,Menu))
@@ -287,12 +285,12 @@ class Parameters(tk.Frame):
 		buttonMenu = ttk.Button(self, text ="Menu", command = partial(controller.show_frame,Menu))
 		buttonMenu.grid(row = 1, column = 1, padx = 10, pady = 10,sticky='w')
 
-		SaveFileFolderSave = tk.Text(self, height=1,width=25)
-		SaveFileFolderSave.insert(tk.INSERT, controller.parameters["saveFolder"])
-		SaveFileFolderSave.grid(row = 2, column = 4, padx = 10, pady = 10,sticky='w')
+		#SaveFileFolderSave = tk.Text(self, height=1,width=25)
+		#SaveFileFolderSave.insert(tk.INSERT, controller.parameters["saveFolder"])
+		#SaveFileFolderSave.grid(row = 2, column = 4, padx = 10, pady = 10,sticky='w')
 
-		buttonSaveFolder = ttk.Button(self,text='Change Folder for saved files',command = partial(controller.changeSaveFolder,SaveFileFolderSave))
-		buttonSaveFolder.grid(row = 1, column = 4, padx = 10, pady = 10,sticky='w')
+		#buttonSaveFolder = ttk.Button(self,text='Change Folder for saved files',command = partial(controller.changeSaveFolder,SaveFileFolderSave))
+		#buttonSaveFolder.grid(row = 1, column = 4, padx = 10, pady = 10,sticky='w')
 
 		
 		buttonQuit = ttk.Button(self,text="Quit" , style = 'BW.TButton' ,command=controller.Close)
