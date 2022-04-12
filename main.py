@@ -14,8 +14,8 @@ from matplotlib.backends.backend_tkagg import (
 import numpy as np
 from functools import partial
 from cellPresenceDetermination import getInteractionArray
-
-
+from PIL import Image, ImageTk
+from configparser import ConfigParser
 
 LARGEFONT =("Verdana", 35)
 
@@ -44,8 +44,11 @@ class tkinterApp(tk.Tk):
 			self.interactionPositions, self.stats =getInteractionArray(self.folderBrightfield,self.folderLeukemicCell,self.folderTCells)
 		except:
 			self.PopUp("Error","An error occured during the analysis")
-		#Statistics.updateLabels(Statitics,controller = self)
 		self.frames[Statistics].updateLabels(controller = self)
+		self.frames[Statistics].DisplayImage("Step_5_leukemic_cells_center_determination.png",8,1)
+		self.frames[Statistics].DisplayImage("Step_7_t_cells_center_determination.png",8,2)
+		self.frames[Statistics].DisplayImage("Step_8_cell_superpositioning.png",8,3)
+
 
 	def ResetImgDir(self):
 		self.folderBrightfield = ""
@@ -62,6 +65,7 @@ class tkinterApp(tk.Tk):
 
 
 	def changeTheme(self,text,**kwargs):
+		self.theme = text
 		self.styleApp.theme_use(text)
 
 
@@ -84,6 +88,15 @@ class tkinterApp(tk.Tk):
 		plt.show()
 
 	def Close(self):
+		print(type( self.folderBrightfield))
+		config = ConfigParser(allow_no_value=True)
+		config.add_section("Parameters")
+		config.set( "Parameters","folderBrightfield", self.folderBrightfield)
+		config.set("Parameters","folderLeukemicCell", self.folderLeukemicCell)
+		config.set("Parameters","folderTCells", self.folderTCells)
+		config.set("Parameters","theme",self.theme)
+		with open('config.ini', 'w') as conf:
+			config.write(conf)
 		self.destroy()
 
 	def saveGraph(title):
@@ -108,19 +121,23 @@ class tkinterApp(tk.Tk):
 		# __init__ function for class Tk
 		tk.Tk.__init__(self, *args, *args)
 		
-		self.folderVid =''
-		self.folderBrightfield =''
-		self.folderLeukemicCell =''
-		self.folderTCells =''
-		self.list_of_files = []
+
 		self.frames = {}
 		self.wm_iconbitmap('Image/logo.ico')
 		self.title=("Analyse vidéo")
-		self.geometry("800x500")
-
-		self.parameters = { #different parameters
-			"saveFolder" : os.getcwd() + "Result\\"
-		}
+		self.geometry("1000x600")
+		try: #Loading parameters
+			self.config = ConfigParser()
+			self.config.read("config.ini")
+			self.folderBrightfield = self.config["Parameters"]["folderBrightfield"]
+			self.folderLeukemicCell = self.config["Parameters"]["folderLeukemicCell"]
+			self.folderTCells = self.config["Parameters"]["folderTCells"]
+			self.theme = self.config["Parameters"]["Theme"]
+		except: #if the loading fails, default parameters are used
+			self.folderBrightfield = ""
+			self.folderLeukemicCell = ""
+			self.folderTCells = ""
+			self.theme = "radiance"
 
 
 		self.listeOfThemes = self.listeOfThemes = my_list = os.listdir('Themes')
@@ -128,7 +145,8 @@ class tkinterApp(tk.Tk):
 		for i in self.listeOfThemes:
 			self.tk.call("source", "Themes/"+i+"/"+i+".tcl")
 
-		self.styleApp.theme_use("radiance")
+
+		self.styleApp.theme_use(self.theme)
 		self.dic = {}
 		self.interactionPositions = []
 
@@ -168,6 +186,8 @@ class tkinterApp(tk.Tk):
 # first window frame Menu
 
 class Menu(tk.Frame):
+
+
 	def __init__(self, parent, controller):
 		tk.Frame.__init__(self, parent)
 		
@@ -188,7 +208,7 @@ class Menu(tk.Frame):
 
 
 		buttonReset =  ttk.Button(self, text ="Reset", command = partial(controller.ResetImgDir))
-		buttonReset.grid(row = 2, column = 5, padx = 10, pady = 10,sticky='w')
+		buttonReset.grid(row = 2, column = 2, padx = 10, pady = 10,sticky='w')
 
 
 		buttonStatistics = ttk.Button(self, text ="Statistics", command = partial(controller.show_frame,Statistics))
@@ -202,17 +222,17 @@ class Menu(tk.Frame):
 		buttonParameters.grid(row = 3, column = 1, padx = 10, pady = 10,sticky='w')
 
 		buttonStartProg = ttk.Button(self,text="Start analysis", command = partial(controller.StartAnalysis))
-		buttonStartProg.grid(row=1,column=5,padx=10,pady=10,sticky='w')
+		buttonStartProg.grid(row=1,column=2,padx=10,pady=10,sticky='w')
 
 
 		buttonBrightfield = ttk.Button(self,text="Choose the folder with empty cells",command=partial(controller.BrowseBrightfield))
-		buttonBrightfield.grid(row=1,column=6,padx=10,pady=10,sticky='w')
+		buttonBrightfield.grid(row=1,column=3,padx=10,pady=10,sticky='w')
 
 		buttonLeukemicCells = ttk.Button(self,text="Choose the LAST image with leukemic cells", command=partial(controller.BrowseLeukemicCell))
-		buttonLeukemicCells.grid(row=2,column=6,padx=10,pady=10,sticky='w')
+		buttonLeukemicCells.grid(row=2,column=3,padx=10,pady=10,sticky='w')
 
 		buttonTcells = ttk.Button(self,text="Choose the LAST image with T-cells",command = partial(controller.BrowseTCell))
-		buttonTcells.grid(row=3,column=6,padx=10,pady=10,sticky='w')
+		buttonTcells.grid(row=3,column=3,padx=10,pady=10,sticky='w')
 
 
 
@@ -226,11 +246,16 @@ class Menu(tk.Frame):
 
 # second window frame Statistics
 class Statistics(tk.Frame):
+	def DisplayImage(self,nameImg,row,column):
+		photo = ImageTk.PhotoImage(Image.open("Processed/"+ nameImg).resize((150,150)))
+		labelTmp = ttk.Label(self,image = photo)
+		labelTmp.Image = photo
+		labelTmp.grid(row=row, column = column,padx = 10, pady = 10)
 
 	def updateLabels(self,controller):
 		j=1
 		for x,y in controller.stats.items():
-			ttk.Label(self,text = x+" : "+str(round(y,2))).grid(row = j, column = 5, padx =10, pady = 10,sticky='w')
+			ttk.Label(self,text = x+" : "+str(round(y,2))).grid(row = j, column = 2, padx =10, pady = 10,sticky='w')
 			j+=1
 
 
@@ -305,6 +330,17 @@ class Parameters(tk.Frame):
 		buttonTheme = ttk.OptionMenu(self,self.VarTheme,*controller.listeOfThemes, command = controller.changeTheme)
 		buttonTheme.grid(row=4,column = 4, padx = 10 ,pady = 10 ,sticky='w')
 # Driver Code
+
+class MyParser(ConfigParser):
+    def as_dict(self):
+        d = dict(self._sections)
+        for k in d:
+            d[k] = dict(self._defaults, **d[k])
+            d[k].pop('__name__', None)
+        return d
+
+
+
 
 app = tkinterApp()
 app.mainloop()

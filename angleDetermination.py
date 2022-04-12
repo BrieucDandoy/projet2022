@@ -1,4 +1,4 @@
-### Les rectangles jaunes signifient qu'un contours à été supprimé sur la base de son rectangle le plus petit
+### Les rectangles jaunes signifient qu'un contours a été supprimé sur la base de son rectangle le plus petit
 import cv2
 import numpy as np
 from utils import rotate_image

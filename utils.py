@@ -10,13 +10,12 @@ class PathError(Exception):
 
 def load_image(imgPath, angle = 0):
     """Loads an image, rotates it if needed and does sanity checks
-
     Args:
         imgPath (String): Path to the image
         angle (int, optional): Angle the image needs to be rotated to. Defaults to 0.
     """
-    img = cv2.imread(imgPath)
-    if(img is None) : raise PathError('Given path {} is invalid !'.format(imgPath))
+    img = cv2.imdecode(np.fromfile(imgPath , dtype=np.uint8), cv2.IMREAD_COLOR)
+    if(img is None) : raise PathError('Given path is invalid !')
     return rotate_image(img, angle)
 
 def rotate_image(image, angle):
