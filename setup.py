@@ -2,7 +2,7 @@ from cx_Freeze import setup, Executable
 base = None
 #entrez "python setup.py build" dans la console pour écécuter
 #Un dossier build/exe.win-amd64-3.9 va être créé
-#Copier tous les fichier du projet sauf "main.py" dedans
+#Copier tous les fichier du projet dedans
 #exévuter main.exe pour lancer le programme
 
 
