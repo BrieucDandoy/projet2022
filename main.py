@@ -13,11 +13,14 @@ from matplotlib.backends.backend_tkagg import (
 )
 import numpy as np
 from functools import partial
-from cellPresenceDetermination import getInteractionArray
+from cellPresenceDetermination import Analyser
 from PIL import Image, ImageTk
 from configparser import ConfigParser
+from utils import getInitDir
 
-LARGEFONT =("Verdana", 35)
+LARGEFONT = ("Verdana", 35)
+
+
 
 class tkinterApp(tk.Tk):
 	def browseFiles(self,reset): #return a list with all files locai
@@ -30,18 +33,20 @@ class tkinterApp(tk.Tk):
 				if fichier[-3:]=="png":
 					self.list_of_files.append(file)
 	
-
-
 	def BrowseBrightfield(self):
-		self.folderBrightfield = filedialog.askopenfilename (initialdir = "/",title = "Selectionner un dossier")
+		self.folderBrightfield = filedialog.askopenfilename (initialdir = getInitDir(self.folderBrightfield), title = "Selectionner un dossier")
+		self.Analyzer = None
 	def BrowseLeukemicCell(self):
-		self.folderLeukemicCell = filedialog.askopenfilename (initialdir = "/",title = "Select the last image of the leukemic Cells")
+		self.Analyzer.setRenderSuperPos(True) ### TODO : A déplacer sur un boutton
+		self.folderLeukemicCell = filedialog.askopenfilename (initialdir = getInitDir(self.folderLeukemicCell), title = "Select the last image of the leukemic Cells")
 	def BrowseTCell(self):
-		self.folderTCells = filedialog.askopenfilename (initialdir = "/",title = "Select the last image of the Tcells")
+		self.Analyzer.setRenderSteps(True) ### TODO : A déplacer sur un boutton
+		self.folderTCells = filedialog.askopenfilename (initialdir = getInitDir(self.folderTCells), title = "Select the last image of the Tcells")
 
 	def StartAnalysis(self):
 		try:
-			self.interactionPositions, self.stats =getInteractionArray(self.folderBrightfield,self.folderLeukemicCell,self.folderTCells)
+			if(self.Analyzer is None) : self.Analyzer = Analyser(self.folderBrightfield)
+			self.interactionPositions, self.stats = self.Analyzer.getInteractionArray(self.folderLeukemicCell,self.folderTCells)
 		except:
 			self.PopUp("Error","An error occured during the analysis")
 		self.frames[Statistics].updateLabels(controller = self)
@@ -49,25 +54,18 @@ class tkinterApp(tk.Tk):
 		self.frames[Statistics].DisplayImage("Step_7_t_cells_center_determination.png",8,2)
 		self.frames[Statistics].DisplayImage("Step_8_cell_superpositioning.png",8,3)
 
-
 	def ResetImgDir(self):
 		self.folderBrightfield = ""
-		self.folderBrightfield = ""
+		self.folderLeukemicCell = ""
 		self.folderTCells = ""
 		self.PopUp("Reset","Images directories have been reset")
-
 
 	def PopUp(self,titre,message):
 		tk.messagebox.showinfo(titre,message)
 
-
-
-
-
 	def changeTheme(self,text,**kwargs):
 		self.theme = text
 		self.styleApp.theme_use(text)
-
 
 	def changeSaveFolder(self,text):
 		self.saveFolder = filedialog.askdirectory (initialdir = "/",title = "Selectionner un dossier")
@@ -91,7 +89,7 @@ class tkinterApp(tk.Tk):
 		print(type( self.folderBrightfield))
 		config = ConfigParser(allow_no_value=True)
 		config.add_section("Parameters")
-		config.set( "Parameters","folderBrightfield", self.folderBrightfield)
+		config.set("Parameters","folderBrightfield", self.folderBrightfield)
 		config.set("Parameters","folderLeukemicCell", self.folderLeukemicCell)
 		config.set("Parameters","folderTCells", self.folderTCells)
 		config.set("Parameters","theme",self.theme)
@@ -105,7 +103,6 @@ class tkinterApp(tk.Tk):
 	def resetList(self):
 		self.list_of_files=[]
 
-
 	def Display_Image():
 		#VarTheme
 		print("Rien pour l'instant")
@@ -116,12 +113,11 @@ class tkinterApp(tk.Tk):
 		else:
 			print("Error no valid files were found")
 
-
 	def __init__(self, *args, **kwargs):		
 		# __init__ function for class Tk
-		tk.Tk.__init__(self, *args, *args)
+		tk.Tk.__init__(self, *args, **kwargs)
 		
-
+		self.Analyzer = None
 		self.frames = {}
 		self.wm_iconbitmap('Image/logo.ico')
 		self.title=("Analyse vidéo")
@@ -140,21 +136,14 @@ class tkinterApp(tk.Tk):
 			self.theme = "radiance"
 
 
-		self.listeOfThemes = self.listeOfThemes = my_list = os.listdir('Themes')
+		self.listeOfThemes = self.listeOfThemes = os.listdir('Themes')
 		self.styleApp = ttk.Style()
 		for i in self.listeOfThemes:
 			self.tk.call("source", "Themes/"+i+"/"+i+".tcl")
 
-
 		self.styleApp.theme_use(self.theme)
 		self.dic = {}
 		self.interactionPositions = []
-
-
-
-
-
-
 
 		# creating a container
 		container = tk.Frame(self)
@@ -171,8 +160,6 @@ class tkinterApp(tk.Tk):
 			# Menu, Statistics, Parameters respectively with
 			# for loop
 			self.frames[F] = frame
-
-			
 		self.show_frame(Menu)
 
 	# to display the current frame passed as
@@ -186,8 +173,6 @@ class tkinterApp(tk.Tk):
 # first window frame Menu
 
 class Menu(tk.Frame):
-
-
 	def __init__(self, parent, controller):
 		tk.Frame.__init__(self, parent)
 		
@@ -195,17 +180,14 @@ class Menu(tk.Frame):
 		#label = ttk.Label(self, text ="Menu", font = LARGEFONT)
 		#label.grid(row = 0, column = 4, padx = 10, pady = 10,sticky='w')
 
-
 		#styleButton= ttk.Style(self)
 		#styleButton.configure('BW.TButton', font =('calibri', 10),foreground = 'white',background='#107D31')
 		
-
 		# putting the button in its place by
 		# using grid
 
 		#buttonDirAdd = ttk.Button(self,text = "Add Directory", command = partial(controller.browseFiles,False))
 		#buttonDirAdd.grid(row=2,column=4 ,padx=10, pady=10,sticky='w')
-
 
 		buttonReset =  ttk.Button(self, text ="Reset", command = partial(controller.ResetImgDir))
 		buttonReset.grid(row = 2, column = 2, padx = 10, pady = 10,sticky='w')
@@ -234,9 +216,6 @@ class Menu(tk.Frame):
 		buttonTcells = ttk.Button(self,text="Choose the LAST image with T-cells",command = partial(controller.BrowseTCell))
 		buttonTcells.grid(row=3,column=3,padx=10,pady=10,sticky='w')
 
-
-
-
 		#buttonSaveResult = ttk.Button(self,text="Save analysis")
 		#buttonSaveResult.grid(row = 4, column = 5 , padx = 10 , pady = 10 ,sticky='w')
 
@@ -258,11 +237,7 @@ class Statistics(tk.Frame):
 			ttk.Label(self,text = x+" : "+str(round(y,2))).grid(row = j, column = 2, padx =10, pady = 10,sticky='w')
 			j+=1
 
-
-
 	def __init__(self, parent, controller):
-
-
 		tk.Frame.__init__(self, parent)
 		#label = ttk.Label(self, text ="Statistics", font = LARGEFONT)
 		#label.grid(row = 0, column = 4, padx = 10, pady = 10,sticky='w')
@@ -286,10 +261,6 @@ class Statistics(tk.Frame):
 		buttonQuit = ttk.Button(self,text="Quit" , style = 'BW.TButton' ,command=controller.Close)
 		buttonQuit.grid(row=4,column = 1, padx = 10 ,pady = 10 ,sticky='w')
 
-
-
-
-
 # third window frame Parameters
 class Parameters(tk.Frame):
 	def __init__(self, parent, controller):
@@ -297,15 +268,11 @@ class Parameters(tk.Frame):
 		#label = ttk.Label(self, text ="Parameters", font = LARGEFONT)
 		#label.grid(row = 0, column = 4, padx = 10, pady = 10,sticky='w')
 
-
-
 		buttonParameters = ttk.Button(self, text ="Parameters",state='disabled')
 		buttonParameters.grid(row = 3, column = 1, padx = 10, pady = 10,sticky='w')
 
-
 		buttonStatistics = ttk.Button(self, text ="Statistics", command = partial(controller.show_frame,Statistics))
 		buttonStatistics.grid(row = 2, column = 1, padx = 10, pady = 10,sticky='w')
-
 
 		buttonMenu = ttk.Button(self, text ="Menu", command = partial(controller.show_frame,Menu))
 		buttonMenu.grid(row = 1, column = 1, padx = 10, pady = 10,sticky='w')
@@ -317,10 +284,8 @@ class Parameters(tk.Frame):
 		#buttonSaveFolder = ttk.Button(self,text='Change Folder for saved files',command = partial(controller.changeSaveFolder,SaveFileFolderSave))
 		#buttonSaveFolder.grid(row = 1, column = 4, padx = 10, pady = 10,sticky='w')
 
-		
 		buttonQuit = ttk.Button(self,text="Quit" , style = 'BW.TButton' ,command=controller.Close)
 		buttonQuit.grid(row=4,column = 1, padx = 10 ,pady = 10 ,sticky='w')
-
 
 		label = ttk.Label(self, text ="Change Theme")
 		label.grid(row = 3, column = 4, padx = 10, pady = 10,sticky='w')
@@ -329,10 +294,6 @@ class Parameters(tk.Frame):
 		self.VarTheme.set(controller.listeOfThemes[0])
 		buttonTheme = ttk.OptionMenu(self,self.VarTheme,*controller.listeOfThemes, command = controller.changeTheme)
 		buttonTheme.grid(row=4,column = 4, padx = 10 ,pady = 10 ,sticky='w')
-# Driver Code
-
-
-
 
 
 

@@ -332,7 +332,7 @@ def drawFigures(allCenters, centerColumnX) :
 def getPositionArray(img):
     print("Finding holes positions ...")
     IMG_WIDTH, IMG_HEIGHT, _ = img.shape
-    if(DEBUG) : cv2.imwrite(PROSSESED_DIRNAME + "rotated.png", img)
+    cv2.imwrite(PROSSESED_DIRNAME + "rotated.png", img)
 
     # On récupère le centre de chaque rectangles formé autour des contours détectés par OpenCV
     centers = getContourCenters(img, IMG_WIDTH)
@@ -382,7 +382,7 @@ def getPositionArray(img):
     # On remplit le tableau des positions de chaque puit par rapport à la grille
     positionArray, centersSortedByHeight = populateArray(allCenters, numberOfColumnsOnOneSide)
 
-    if(DEBUG) : cv2.imwrite("recognition.png", img)
+    if(DEBUG) : cv2.imwrite(PROSSESED_DIRNAME + "recognition.png", img)
 
     printPositionArray(positionArray)
 

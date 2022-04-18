@@ -66,14 +66,6 @@ def printPositionArray(arr):
         f.write(strLine[5:] + "\n")
     f.close()
 
-
-
-
-
-
-
-
-
 def isSameColor(c1, c2):
     return (c1[0] == c2[0] and c1[1] == c2[1] and c1[2] == c2[2])
 
@@ -104,3 +96,7 @@ def removeDuplicates(arr, maxDist):
             if(distance(point[1], p[1]) < maxDist and (arr.count(p) > 1 or p[0] != point[0])) : 
                 arr.remove(p)
     return arr
+
+def getInitDir(path):
+    if(path == '/') : return path 
+    return '/'.join(path.split('/')[0:-1])
