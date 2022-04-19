@@ -1,6 +1,6 @@
 from re import L
 import tkinter as tk
-from tkinter import mainloop, ttk
+from tkinter import Frame, mainloop, ttk
 from tkinter import filedialog
 import os
 import matplotlib
@@ -17,42 +17,91 @@ from cellPresenceDetermination import Analyser
 from PIL import Image, ImageTk
 from configparser import ConfigParser
 from utils import getInitDir
-
+import csv
 LARGEFONT = ("Verdana", 35)
 
 
 
 class tkinterApp(tk.Tk):
-	def browseFiles(self,reset): #return a list with all files locai
+
+	def Test(self):
+		window = AnalysisWindow(self)
+		#window.DisplayImage("Step_5_leukemic_cells_center_determination.PNG")
+
+
+
+	def browseFilesTCell(self,reset): #return a list with all files locai
 		if reset:
-			self.list_of_files=[]
-		self.folderVid = filedialog.askdirectory (initialdir = "/",title = "Selectionner un dossier")
-		for root, dirs, files in os.walk(self.folderVid):
+			self.listeTCell=[]
+		folderVid = filedialog.askdirectory (initialdir = "/",title = "Select the directory which contains the images of T-cells")
+		for root, dirs, files in os.walk(folderVid):
 			for file in files:
 				fichier = os.path.join(root,file)
-				if fichier[-3:]=="png":
-					self.list_of_files.append(file)
-	
+				self.listeTCell.append(fichier)
+
+	def browseFilesLeukemicCell(self,reset): #return a list with all files locai
+		if reset:
+			self.listeLeukemicCell=[]
+		folderVid = filedialog.askdirectory (initialdir = "/",title = "Select the directory which contains the images of Leukemic cells")
+		for root, dirs, files in os.walk(folderVid):
+			for file in files:
+				fichier = os.path.join(root,file)
+				self.listeLeukemicCell.append(fichier)
+
+
 	def BrowseBrightfield(self):
-		self.folderBrightfield = filedialog.askopenfilename (initialdir = getInitDir(self.folderBrightfield), title = "Selectionner un dossier")
+		self.folderBrightfield = filedialog.askopenfilename (initialdir = getInitDir(self.folderBrightfield), title = "Select the image with empty cells")
 		self.Analyzer = None
 	def BrowseLeukemicCell(self):
-		self.Analyzer.setRenderSuperPos(True) ### TODO : A déplacer sur un boutton
-		self.folderLeukemicCell = filedialog.askopenfilename (initialdir = getInitDir(self.folderLeukemicCell), title = "Select the last image of the leukemic Cells")
+		#self.Analyzer.setRenderSuperPos(True) ### TODO : A déplacer sur un boutton
+		#self.folderLeukemicCell = filedialog.askopenfilename (initialdir = getInitDir(self.folderLeukemicCell), title = "Select the last image of the leukemic Cells")
+		self.browseFilesLeukemicCell(True)
 	def BrowseTCell(self):
-		self.Analyzer.setRenderSteps(True) ### TODO : A déplacer sur un boutton
-		self.folderTCells = filedialog.askopenfilename (initialdir = getInitDir(self.folderTCells), title = "Select the last image of the Tcells")
+		#self.Analyzer.setRenderSteps(True) ### TODO : A déplacer sur un boutton
+		#self.folderTCells = filedialog.askopenfilename (initialdir = getInitDir(self.folderTCells), title = "Select the last image of the Tcells")
+		self.browseFilesTCell(True)
 
 	def StartAnalysis(self):
-		try:
-			if(self.Analyzer is None) : self.Analyzer = Analyser(self.folderBrightfield)
-			self.interactionPositions, self.stats = self.Analyzer.getInteractionArray(self.folderLeukemicCell,self.folderTCells)
-		except:
-			self.PopUp("Error","An error occured during the analysis")
-		self.frames[Statistics].updateLabels(controller = self)
-		self.frames[Statistics].DisplayImage("Step_5_leukemic_cells_center_determination.png",8,1)
-		self.frames[Statistics].DisplayImage("Step_7_t_cells_center_determination.png",8,2)
-		self.frames[Statistics].DisplayImage("Step_8_cell_superpositioning.png",8,3)
+		dif = len(self.listeTCell) - len(self.listeLeukemicCell)
+		if dif > 0:
+			self.listeTCell = self.listeTCell[dif:]
+		elif dif < 0:
+			self.listeLeukemicCell = self.listeLeukemicCell[abs(dif):]
+		#try:
+		if(self.Analyzer is None) : self.Analyzer = Analyser(self.folderBrightfield)
+		if self.DisplayImage :
+			self.topLevelListe = AnalysisWindow (self)
+			self.topLevelListe.DisplayImage("Step_5_leukemic_cells_center_determination.PNG")
+
+		for imgTcell,imgLcell in zip (self.listeTCell, self.listeLeukemicCell):
+			interactionPositions, stat = self.Analyzer.getInteractionArray(imgLcell,imgTcell)
+			self.stats["numberOfValidLeukemicCells"].append(stat["numberOfValidLeukemicCells"])
+			self.stats["numberOfValidTCells"].append(stat["numberOfValidTCells"])
+			self.stats["numberOfinteractions"].append(stat["numberOfinteractions"])
+			self.stats["pourcentageOfValidLeukemicCells"].append(stat["pourcentageOfValidLeukemicCells"])
+			self.stats["pourcentageOfValidTCells"].append(stat["pourcentageOfValidTCells"])
+			self.stats["pourcentageOfInteractions"].append(stat["pourcentageOfInteractions"])
+			
+				#fenetreAnalyse.DisplayImage("Step_5_leukemic_cells_center_determination",1,1)
+		if self.DisplayImage:
+			self.topLevelListe.DisplayImage("Step_5_leukemic_cells_center_determination.PNG")
+
+
+			
+		print(self.stats)
+
+
+		with open ("Statistics.csv" , "w") as excel:
+			writer = csv.writer (excel, delimiter = ";")
+			writer.writerow(self.stats.keys())
+			writer.writerows(zip(*self.stats.values()))
+
+
+
+		#except:
+			#self.PopUp("Error","An error occured during the analysis")
+
+
 
 	def ResetImgDir(self):
 		self.folderBrightfield = ""
@@ -103,25 +152,30 @@ class tkinterApp(tk.Tk):
 	def resetList(self):
 		self.list_of_files=[]
 
-	def Display_Image():
-		#VarTheme
-		print("Rien pour l'instant")
-
 	def PrintFilesDir(self):
 		if len(self.list_of_files)>0:
 			print(self.list_of_files)
 		else:
 			print("Error no valid files were found")
 
+	def SetDisplayImage(self):
+		if self.DisplayImage:
+			self.DisplayImage=False
+		else:
+			self.DisplayImage = True
+
 	def __init__(self, *args, **kwargs):		
 		# __init__ function for class Tk
 		tk.Tk.__init__(self, *args, **kwargs)
-		
+		self.listeLeukemicCell = []
+		self.listeTCell = []
 		self.Analyzer = None
+		self.topLevelListe = []
 		self.frames = {}
 		self.wm_iconbitmap('Image/logo.ico')
-		self.title=("Analyse vidéo")
+		#self.title=("Analyse vidéo")
 		self.geometry("1000x600")
+		self.DisplayImage = False
 		try: #Loading parameters
 			self.config = ConfigParser()
 			self.config.read("config.ini")
@@ -144,6 +198,15 @@ class tkinterApp(tk.Tk):
 		self.styleApp.theme_use(self.theme)
 		self.dic = {}
 		self.interactionPositions = []
+		self.stats = {
+			"numberOfValidLeukemicCells" : [],
+			"numberOfValidTCells" : [],
+			"numberOfinteractions": [],
+			"pourcentageOfValidLeukemicCells": [],
+			"pourcentageOfValidTCells": [],
+			"pourcentageOfInteractions": []
+		
+		}
 
 		# creating a container
 		container = tk.Frame(self)
@@ -188,6 +251,13 @@ class Menu(tk.Frame):
 
 		#buttonDirAdd = ttk.Button(self,text = "Add Directory", command = partial(controller.browseFiles,False))
 		#buttonDirAdd.grid(row=2,column=4 ,padx=10, pady=10,sticky='w')
+		buttonTest = ttk.Button(self, text = "Test",command=partial(controller.Test))
+		buttonTest.grid(row = 4, column = 2, padx = 10, pady = 10,sticky='w')
+
+
+
+		buttonDisplayImages = ttk.Checkbutton(self, text = "Display Images live (lower performances)",command=partial(controller.SetDisplayImage))
+		buttonDisplayImages.grid(row = 3, column = 2, padx = 10, pady = 10,sticky='w')
 
 		buttonReset =  ttk.Button(self, text ="Reset", command = partial(controller.ResetImgDir))
 		buttonReset.grid(row = 2, column = 2, padx = 10, pady = 10,sticky='w')
@@ -231,11 +301,7 @@ class Statistics(tk.Frame):
 		labelTmp.Image = photo
 		labelTmp.grid(row=row, column = column,padx = 10, pady = 10)
 
-	def updateLabels(self,controller):
-		j=1
-		for x,y in controller.stats.items():
-			ttk.Label(self,text = x+" : "+str(round(y,2))).grid(row = j, column = 2, padx =10, pady = 10,sticky='w')
-			j+=1
+
 
 	def __init__(self, parent, controller):
 		tk.Frame.__init__(self, parent)
@@ -296,6 +362,30 @@ class Parameters(tk.Frame):
 		buttonTheme.grid(row=4,column = 4, padx = 10 ,pady = 10 ,sticky='w')
 
 
+	
 
-app = tkinterApp()
-app.mainloop()
+class AnalysisWindow(tk.Toplevel):
+	def __init__(self, parent):
+		tk.Toplevel.__init__(self, parent)
+		self.canvasImg = tk.Canvas(self, width=600, height= 600)
+		photo = ImageTk.PhotoImage(Image.open("Processed/"+ "Step_5_leukemic_cells_center_determination.PNG").resize((600,600)))
+		self.canvasImg.create_image(50,10,image=photo)
+		self.canvasImg.pack()
+
+
+
+
+	def DisplayImage(self,nameImg):
+		photo = ImageTk.PhotoImage(Image.open("Processed/"+ nameImg).resize((600,600)))
+		self.canvasImg.create_image(image=photo)
+        
+
+
+
+
+
+
+
+if __name__ == "__main__":
+	app = tkinterApp()
+	app.mainloop()
