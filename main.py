@@ -26,22 +26,30 @@ RUN_FLAG = True
 IMAGE_DISP = True
 import time
 from multiprocessing import Process
+global stats
+stats = {
+	"numberOfValidLeukemicCells" : [],
+	"numberOfValidTCells" : [],
+	"numberOfinteractions": [],
+	"pourcentageOfValidLeukemicCells": [],
+	"pourcentageOfValidTCells": [],
+	"pourcentageOfInteractions": []
 
+}
 class tkinterApp(tk.Tk):
 
-	def Test(self):
-		window = AnalysisWindow(self)
-		time.sleep(2)
-		window.DisplayImage()
-		#time.sleep(1)
-		#window.DisplayImage("Step_5_leukemic_cells_center_determination.PNG")
-		#window.DisplayImage()
+	def setRenderSuperPosition(self):
+		if self.setRenderSuperPosition:
+			self.renderSuperPosition=False
+		else:
+			self.renderSuperPosition = True
 
 
 	def browseFilesTCell(self,reset): #return a list with all files locai
 		if reset:
 			self.listeTCell=[]
 		folderVid = filedialog.askdirectory (initialdir = "/",title = "Select the directory which contains the images of T-cells")
+		self.folderTCells = folderVid
 		for root, dirs, files in os.walk(folderVid):
 			for file in files:
 				fichier = os.path.join(root,file)
@@ -51,6 +59,7 @@ class tkinterApp(tk.Tk):
 		if reset:
 			self.listeLeukemicCell=[]
 		folderVid = filedialog.askdirectory (initialdir = "/",title = "Select the directory which contains the images of Leukemic cells")
+		self.folderLeukemicCell = folderVid
 		for root, dirs, files in os.walk(folderVid):
 			for file in files:
 				fichier = os.path.join(root,file)
@@ -61,12 +70,8 @@ class tkinterApp(tk.Tk):
 		self.folderBrightfield = filedialog.askopenfilename (initialdir = getInitDir(self.folderBrightfield), title = "Select the image with empty cells")
 		self.Analyzer = None
 	def BrowseLeukemicCell(self):
-		#self.Analyzer.setRenderSuperPos(True) ### TODO : A déplacer sur un boutton
-		#self.folderLeukemicCell = filedialog.askopenfilename (initialdir = getInitDir(self.folderLeukemicCell), title = "Select the last image of the leukemic Cells")
 		self.browseFilesLeukemicCell(True)
 	def BrowseTCell(self):
-		#self.Analyzer.setRenderSteps(True) ### TODO : A déplacer sur un boutton
-		#self.folderTCells = filedialog.askopenfilename (initialdir = getInitDir(self.folderTCells), title = "Select the last image of the Tcells")
 		self.browseFilesTCell(True)
 
 	def StartAnalysis(self):
@@ -77,34 +82,23 @@ class tkinterApp(tk.Tk):
 			self.listeLeukemicCell = self.listeLeukemicCell[abs(dif):]
 		#try:
 		if(self.Analyzer is None) : self.Analyzer = Analyser(self.folderBrightfield)
-		if self.DisplayImage :
+
+		self.Analyzer.setRenderSuperPos(self.renderSuperPosition)
+		self.Analyzer.setRenderSteps(self.renderStep)
+
+
+		if self.renderStep :
 			self.topLevel = AnalysisWindow (self)
-		ProcessAnalysis(self.listeTCell, self.listeLeukemicCell,self.stats,self.Analyzer)
+		ProcessAnalysis(self.listeTCell, self.listeLeukemicCell,self.Analyzer,self.saveFolder)
 		self.topLevel.DisplayImage()
-				
-				
-
-
-		with open ("Statistics.csv" , "w") as excel:
-			writer = csv.writer (excel, delimiter = ";")
-			writer.writerow(self.stats.keys())
-			writer.writerows(zip(*self.stats.values()))
+		if  not RUN_FLAG:
+			self.topLevel.DisplayImagesEnd()
 
 
 
 		#except:
 			#self.PopUp("Error","An error occured during the analysis")
 
-	def Analysis(self):
-			for imgTcell,imgLcell in zip (self.listeTCell, self.listeLeukemicCell):
-				interactionPositions, stat = self.Analyzer.getInteractionArray(imgLcell,imgTcell)
-				self.stats["numberOfValidLeukemicCells"].append(stat["numberOfValidLeukemicCells"])
-				self.stats["numberOfValidTCells"].append(stat["numberOfValidTCells"])
-				self.stats["numberOfinteractions"].append(stat["numberOfinteractions"])
-				self.stats["pourcentageOfValidLeukemicCells"].append(stat["pourcentageOfValidLeukemicCells"])
-				self.stats["pourcentageOfValidTCells"].append(stat["pourcentageOfValidTCells"])
-				self.stats["pourcentageOfInteractions"].append(stat["pourcentageOfInteractions"])
-			self.run_flag=False
 
 
 	def ResetImgDir(self):
@@ -150,8 +144,9 @@ class tkinterApp(tk.Tk):
 			config.write(conf)
 		self.destroy()
 
-	def saveGraph(title):
-		plt.savefig("Saved Files/" + title + '.png')
+	def saveGraph(self,title):
+		plt.savefig(self.saveFolder + title + '.png')
+
 
 	def resetList(self):
 		self.list_of_files=[]
@@ -162,11 +157,11 @@ class tkinterApp(tk.Tk):
 		else:
 			print("Error no valid files were found")
 
-	def SetDisplayImage(self):
-		if self.DisplayImage:
-			self.DisplayImage=False
+	def setRenderStep(self):
+		if self.renderStep:
+			self.renderStep=False
 		else:
-			self.DisplayImage = True
+			self.renderStep = True
 
 	def __init__(self, *args, **kwargs):		
 		# __init__ function for class Tk
@@ -178,7 +173,6 @@ class tkinterApp(tk.Tk):
 		self.frames = {}
 		self.wm_iconbitmap('Image/logo.ico')
 		#self.title=("Analyse vidéo")
-		self.geometry("1000x600")
 		self.DisplayImage = False
 		try: #Loading parameters
 			self.config = ConfigParser()
@@ -187,13 +181,16 @@ class tkinterApp(tk.Tk):
 			self.folderLeukemicCell = self.config["Parameters"]["folderLeukemicCell"]
 			self.folderTCells = self.config["Parameters"]["folderTCells"]
 			self.theme = self.config["Parameters"]["Theme"]
+			self.saveFolder = self.config["Parameters"]["saveFolder"]
 		except: #if the loading fails, default parameters are used
 			self.folderBrightfield = ""
 			self.folderLeukemicCell = ""
 			self.folderTCells = ""
 			self.theme = "radiance"
+			self.saveFolder = ""
 
-
+		self.renderSuperPosition = False
+		self.renderStep = False
 		self.listeOfThemes = self.listeOfThemes = os.listdir('Themes')
 		self.styleApp = ttk.Style()
 		for i in self.listeOfThemes:
@@ -202,15 +199,6 @@ class tkinterApp(tk.Tk):
 		self.styleApp.theme_use(self.theme)
 		self.dic = {}
 		self.interactionPositions = []
-		self.stats = {
-			"numberOfValidLeukemicCells" : [],
-			"numberOfValidTCells" : [],
-			"numberOfinteractions": [],
-			"pourcentageOfValidLeukemicCells": [],
-			"pourcentageOfValidTCells": [],
-			"pourcentageOfInteractions": []
-		
-		}
 
 		# creating a container
 		container = tk.Frame(self)
@@ -221,7 +209,7 @@ class tkinterApp(tk.Tk):
 
 		# iterating through a tuple consisting
 		# of the different page layouts
-		for F in (Menu, Statistics, Parameters):
+		for F in (Menu, Parameters):
 			frame = F(container, self)
 			# initializing frame of that object from
 			# Menu, Statistics, Parameters respectively with
@@ -255,27 +243,32 @@ class Menu(tk.Frame):
 
 		#buttonDirAdd = ttk.Button(self,text = "Add Directory", command = partial(controller.browseFiles,False))
 		#buttonDirAdd.grid(row=2,column=4 ,padx=10, pady=10,sticky='w')
-		buttonTest = ttk.Button(self, text = "Test",command=partial(controller.Test))
-		buttonTest.grid(row = 4, column = 2, padx = 10, pady = 10,sticky='w')
+		#buttonTest = ttk.Button(self, text = "Test",command=partial(controller.Test))
+		#buttonTest.grid(row = 4, column = 2, padx = 10, pady = 10,sticky='w')
 
 
 
-		buttonDisplayImages = ttk.Checkbutton(self, text = "Display Images live (lower performances)",command=partial(controller.SetDisplayImage))
+		buttonDisplayImages = ttk.Checkbutton(self, text = "Display Images live",command=partial(controller.setRenderStep))
 		buttonDisplayImages.grid(row = 3, column = 2, padx = 10, pady = 10,sticky='w')
+
+		buttonSuperPosition = ttk.Checkbutton(self, text = "create the superposition image\n(lower performance)",command=partial(controller.setRenderSuperPosition))
+		buttonSuperPosition.grid(row = 4, column = 2, padx = 10, pady = 10,sticky='w')
+
+
 
 		buttonReset =  ttk.Button(self, text ="Reset", command = partial(controller.ResetImgDir))
 		buttonReset.grid(row = 2, column = 2, padx = 10, pady = 10,sticky='w')
 
 
-		buttonStatistics = ttk.Button(self, text ="Statistics", command = partial(controller.show_frame,Statistics))
-		buttonStatistics.grid(row = 2, column = 1, padx = 10, pady = 10,sticky='w')
+		#buttonStatistics = ttk.Button(self, text ="Statistics", command = partial(controller.show_frame,Statistics))
+		#buttonStatistics.grid(row = 2, column = 1, padx = 10, pady = 10,sticky='w')
 
 		buttonMenu = ttk.Button(self,text="Menu", state='disabled')
 		buttonMenu.grid(row = 1, column = 1, padx = 10, pady = 10,sticky='w')
 
 		## button to show frame 2 with text layout2
 		buttonParameters = ttk.Button(self, text ="Parameters", command = partial(controller.show_frame,Parameters))
-		buttonParameters.grid(row = 3, column = 1, padx = 10, pady = 10,sticky='w')
+		buttonParameters.grid(row = 2, column = 1, padx = 10, pady = 10,sticky='w')
 
 		buttonStartProg = ttk.Button(self,text="Start analysis", command = partial(controller.StartAnalysis))
 		buttonStartProg.grid(row=1,column=2,padx=10,pady=10,sticky='w')
@@ -294,7 +287,7 @@ class Menu(tk.Frame):
 		#buttonSaveResult.grid(row = 4, column = 5 , padx = 10 , pady = 10 ,sticky='w')
 
 		buttonQuit = ttk.Button(self,text="Quit" , style = 'BW.TButton' ,command=controller.Close)
-		buttonQuit.grid(row=4,column = 1, padx = 10 ,pady = 10 ,sticky='w')
+		buttonQuit.grid(row=3,column = 1, padx = 10 ,pady = 10 ,sticky='w')
 
 
 # second window frame Statistics
@@ -339,23 +332,23 @@ class Parameters(tk.Frame):
 		#label.grid(row = 0, column = 4, padx = 10, pady = 10,sticky='w')
 
 		buttonParameters = ttk.Button(self, text ="Parameters",state='disabled')
-		buttonParameters.grid(row = 3, column = 1, padx = 10, pady = 10,sticky='w')
+		buttonParameters.grid(row = 2, column = 1, padx = 10, pady = 10,sticky='w')
 
-		buttonStatistics = ttk.Button(self, text ="Statistics", command = partial(controller.show_frame,Statistics))
-		buttonStatistics.grid(row = 2, column = 1, padx = 10, pady = 10,sticky='w')
+		#buttonStatistics = ttk.Button(self, text ="Statistics", command = partial(controller.show_frame,Statistics))
+		#buttonStatistics.grid(row = 2, column = 1, padx = 10, pady = 10,sticky='w')
 
 		buttonMenu = ttk.Button(self, text ="Menu", command = partial(controller.show_frame,Menu))
 		buttonMenu.grid(row = 1, column = 1, padx = 10, pady = 10,sticky='w')
 
-		#SaveFileFolderSave = tk.Text(self, height=1,width=25)
-		#SaveFileFolderSave.insert(tk.INSERT, controller.parameters["saveFolder"])
-		#SaveFileFolderSave.grid(row = 2, column = 4, padx = 10, pady = 10,sticky='w')
+		SaveFileFolderSave = tk.Text(self, height=1,width=25)
+		SaveFileFolderSave.insert(tk.INSERT, controller.saveFolder)
+		SaveFileFolderSave.grid(row = 2, column = 4, padx = 10, pady = 10,sticky='w')
 
-		#buttonSaveFolder = ttk.Button(self,text='Change Folder for saved files',command = partial(controller.changeSaveFolder,SaveFileFolderSave))
-		#buttonSaveFolder.grid(row = 1, column = 4, padx = 10, pady = 10,sticky='w')
+		buttonSaveFolder = ttk.Button(self,text='Change Folder for saved files',command = partial(controller.changeSaveFolder,SaveFileFolderSave))
+		buttonSaveFolder.grid(row = 1, column = 4, padx = 10, pady = 10,sticky='w')
 
 		buttonQuit = ttk.Button(self,text="Quit" , style = 'BW.TButton' ,command=controller.Close)
-		buttonQuit.grid(row=4,column = 1, padx = 10 ,pady = 10 ,sticky='w')
+		buttonQuit.grid(row=3,column = 1, padx = 10 ,pady = 10 ,sticky='w')
 
 		label = ttk.Label(self, text ="Change Theme")
 		label.grid(row = 3, column = 4, padx = 10, pady = 10,sticky='w')
@@ -369,28 +362,33 @@ class Parameters(tk.Frame):
 	
 
 class AnalysisWindow(tk.Toplevel):
-	def __init__(self, parent):
-		tk.Toplevel.__init__(self, parent)
-		#photo = ImageTk.PhotoImage(Image.open("Image/"+ "blankImg.PNG").resize((600,600)))
-		#self.labelTmp = ttk.Label(self,image = photo)
-		#self.labelTmp.Image = photo
-		#self.labelTmp.grid(row=1, column = 1,padx = 10, pady = 10)
-
+	def __init__(self, controller):
+		super().__init__(controller)
+		buttonPlot=ttk.Button(self,text="Plot The number of interaction over time",command=partial(controller.pltGraphOutside,stats["numberOfinteractions"],np.arange(0,len(stats["numberOfinteractions"]),1),"Number of interaction"))
+		buttonPlot.grid(row=0,column=3, padx=10,pady=10)
+	def UpdateImage(self,image,row,column):
+		try:
+			photo2 = ImageTk.PhotoImage(Image.open("Processed/"+ image).resize((300,300)))
+			labelTmp = ttk.Label(self,image = photo2)
+			labelTmp.Image = photo2
+			labelTmp.grid(row=row, column = column,padx = 10, pady = 10)
+		except:
+			print(image + " is probably truncated")
 
 	def DisplayImage(self):
 		if IMAGE_DISP:
-			try:
-				photo2 = ImageTk.PhotoImage(Image.open("Processed/"+ "tCellsLast.PNG").resize((400,400)))
-				self.labelTmp = ttk.Label(self,image = photo2)
-				self.labelTmp.Image = photo2
-				self.labelTmp.grid(row=1, column = 1,padx = 10, pady = 10)
-			except:
-				print("image is truncated")
-		self.after(1000,self.DisplayImage)
+			self.UpdateImage("Step_5_leukemic_cells_center_determination.PNG",0,0)
+			self.UpdateImage("Step_7_t_cells_center_determination.PNG",1,0)
+			#self.UpdateImage("Step_8_cell_superpositioning.PNG",0,1)
+			#self.UpdateImage()
+		self.after(10,self.DisplayImage)
 
+	def DisplayImagesEnd(self):
+		self.UpdateImage("Step_5_leukemic_cells_center_determination.PNG",0,0)
+		self.UpdateImage("Step_7_t_cells_center_determination.PNG",1,0)
+		self.UpdateImage("Step_8_cell_superpositioning.PNG",0,1)
 
-def AnalysisExt(listeTCell, listeLeukemicCell,stats,Analyzer):
-	
+def AnalysisExt(listeTCell, listeLeukemicCell,Analyzer,saveFolder):
 		for imgTcell,imgLcell in zip (listeTCell, listeLeukemicCell):
 			IMAGE_DISP = False
 			interactionPositions, stat = Analyzer.getInteractionArray(imgLcell,imgTcell)
@@ -402,15 +400,18 @@ def AnalysisExt(listeTCell, listeLeukemicCell,stats,Analyzer):
 			stats["pourcentageOfInteractions"].append(stat["pourcentageOfInteractions"])
 			IMAGE_DISP = True
 			time.sleep(0.1)
+		with open (saveFolder + "Statistics.csv" , "w") as excel:
+			writer = csv.writer (excel, delimiter = ";")
+			writer.writerow(stats.keys())
+			writer.writerows(zip(*stats.values()))
 		RUN_FLAG=False
 			
 
 
-
-def ProcessAnalysis(listeTCell, listeLeukemicCell,stats,Analyzer):
-	process1 = Process(target=AnalysisExt, args=(listeTCell, listeLeukemicCell,stats,Analyzer))
+def ProcessAnalysis(listeTCell, listeLeukemicCell,Analyzer,saveFolder):
+	global process1# global because we need it afterwards for process.join()
+	process1 = Process(target=AnalysisExt, args=(listeTCell, listeLeukemicCell,Analyzer,saveFolder))
 	process1.start()
-
 
 
 
