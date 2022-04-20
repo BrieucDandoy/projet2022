@@ -1,12 +1,15 @@
-from re import L
+from asyncio.subprocess import Process
+from multiprocessing.pool import RUN
+from re import L, S
 import tkinter as tk
-from tkinter import Frame, mainloop, ttk
+from tkinter import Frame, Toplevel, mainloop, ttk
 from tkinter import filedialog
 import os
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
+import matplotlib.image as mpimg
 from matplotlib.backends.backend_tkagg import (
     FigureCanvasTkAgg,
     NavigationToolbar2Tk
@@ -19,15 +22,20 @@ from configparser import ConfigParser
 from utils import getInitDir
 import csv
 LARGEFONT = ("Verdana", 35)
-
-
+RUN_FLAG = True
+IMAGE_DISP = True
+import time
+from multiprocessing import Process
 
 class tkinterApp(tk.Tk):
 
 	def Test(self):
 		window = AnalysisWindow(self)
+		time.sleep(2)
+		window.DisplayImage()
+		#time.sleep(1)
 		#window.DisplayImage("Step_5_leukemic_cells_center_determination.PNG")
-
+		#window.DisplayImage()
 
 
 	def browseFilesTCell(self,reset): #return a list with all files locai
@@ -70,25 +78,11 @@ class tkinterApp(tk.Tk):
 		#try:
 		if(self.Analyzer is None) : self.Analyzer = Analyser(self.folderBrightfield)
 		if self.DisplayImage :
-			self.topLevelListe = AnalysisWindow (self)
-			self.topLevelListe.DisplayImage("Step_5_leukemic_cells_center_determination.PNG")
-
-		for imgTcell,imgLcell in zip (self.listeTCell, self.listeLeukemicCell):
-			interactionPositions, stat = self.Analyzer.getInteractionArray(imgLcell,imgTcell)
-			self.stats["numberOfValidLeukemicCells"].append(stat["numberOfValidLeukemicCells"])
-			self.stats["numberOfValidTCells"].append(stat["numberOfValidTCells"])
-			self.stats["numberOfinteractions"].append(stat["numberOfinteractions"])
-			self.stats["pourcentageOfValidLeukemicCells"].append(stat["pourcentageOfValidLeukemicCells"])
-			self.stats["pourcentageOfValidTCells"].append(stat["pourcentageOfValidTCells"])
-			self.stats["pourcentageOfInteractions"].append(stat["pourcentageOfInteractions"])
-			
-				#fenetreAnalyse.DisplayImage("Step_5_leukemic_cells_center_determination",1,1)
-		if self.DisplayImage:
-			self.topLevelListe.DisplayImage("Step_5_leukemic_cells_center_determination.PNG")
-
-
-			
-		print(self.stats)
+			self.topLevel = AnalysisWindow (self)
+		ProcessAnalysis(self.listeTCell, self.listeLeukemicCell,self.stats,self.Analyzer)
+		self.topLevel.DisplayImage()
+				
+				
 
 
 		with open ("Statistics.csv" , "w") as excel:
@@ -101,6 +95,16 @@ class tkinterApp(tk.Tk):
 		#except:
 			#self.PopUp("Error","An error occured during the analysis")
 
+	def Analysis(self):
+			for imgTcell,imgLcell in zip (self.listeTCell, self.listeLeukemicCell):
+				interactionPositions, stat = self.Analyzer.getInteractionArray(imgLcell,imgTcell)
+				self.stats["numberOfValidLeukemicCells"].append(stat["numberOfValidLeukemicCells"])
+				self.stats["numberOfValidTCells"].append(stat["numberOfValidTCells"])
+				self.stats["numberOfinteractions"].append(stat["numberOfinteractions"])
+				self.stats["pourcentageOfValidLeukemicCells"].append(stat["pourcentageOfValidLeukemicCells"])
+				self.stats["pourcentageOfValidTCells"].append(stat["pourcentageOfValidTCells"])
+				self.stats["pourcentageOfInteractions"].append(stat["pourcentageOfInteractions"])
+			self.run_flag=False
 
 
 	def ResetImgDir(self):
@@ -127,7 +131,7 @@ class tkinterApp(tk.Tk):
 		plot.plot(x, y)
 		plt.title(title)
 		canvas = FigureCanvasTkAgg(figure, win)
-		canvas.get_tk_widget().grid(row=3, column=3)
+		canvas.get_tk_widget().grid(row=0, column=0)
 
 	def pltGraphOutside(self,x,y,title):
 		plt.plot(x,y)
@@ -367,21 +371,45 @@ class Parameters(tk.Frame):
 class AnalysisWindow(tk.Toplevel):
 	def __init__(self, parent):
 		tk.Toplevel.__init__(self, parent)
-		self.canvasImg = tk.Canvas(self, width=600, height= 600)
-		photo = ImageTk.PhotoImage(Image.open("Processed/"+ "Step_5_leukemic_cells_center_determination.PNG").resize((600,600)))
-		self.canvasImg.create_image(50,10,image=photo)
-		self.canvasImg.pack()
+		#photo = ImageTk.PhotoImage(Image.open("Image/"+ "blankImg.PNG").resize((600,600)))
+		#self.labelTmp = ttk.Label(self,image = photo)
+		#self.labelTmp.Image = photo
+		#self.labelTmp.grid(row=1, column = 1,padx = 10, pady = 10)
+
+
+	def DisplayImage(self):
+		if IMAGE_DISP:
+			try:
+				photo2 = ImageTk.PhotoImage(Image.open("Processed/"+ "tCellsLast.PNG").resize((400,400)))
+				self.labelTmp = ttk.Label(self,image = photo2)
+				self.labelTmp.Image = photo2
+				self.labelTmp.grid(row=1, column = 1,padx = 10, pady = 10)
+			except:
+				print("image is truncated")
+		self.after(1000,self.DisplayImage)
+
+
+def AnalysisExt(listeTCell, listeLeukemicCell,stats,Analyzer):
+	
+		for imgTcell,imgLcell in zip (listeTCell, listeLeukemicCell):
+			IMAGE_DISP = False
+			interactionPositions, stat = Analyzer.getInteractionArray(imgLcell,imgTcell)
+			stats["numberOfValidLeukemicCells"].append(stat["numberOfValidLeukemicCells"])
+			stats["numberOfValidTCells"].append(stat["numberOfValidTCells"])
+			stats["numberOfinteractions"].append(stat["numberOfinteractions"])
+			stats["pourcentageOfValidLeukemicCells"].append(stat["pourcentageOfValidLeukemicCells"])
+			stats["pourcentageOfValidTCells"].append(stat["pourcentageOfValidTCells"])
+			stats["pourcentageOfInteractions"].append(stat["pourcentageOfInteractions"])
+			IMAGE_DISP = True
+			time.sleep(0.1)
+		RUN_FLAG=False
+			
 
 
 
-
-	def DisplayImage(self,nameImg):
-		photo = ImageTk.PhotoImage(Image.open("Processed/"+ nameImg).resize((600,600)))
-		self.canvasImg.create_image(image=photo)
-        
-
-
-
+def ProcessAnalysis(listeTCell, listeLeukemicCell,stats,Analyzer):
+	process1 = Process(target=AnalysisExt, args=(listeTCell, listeLeukemicCell,stats,Analyzer))
+	process1.start()
 
 
 
@@ -389,3 +417,4 @@ class AnalysisWindow(tk.Toplevel):
 if __name__ == "__main__":
 	app = tkinterApp()
 	app.mainloop()
+
