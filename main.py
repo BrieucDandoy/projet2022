@@ -63,7 +63,8 @@ class tkinterApp(tk.Tk):
 
 		if self.renderStep : self.topLevel = AnalysisWindow(self)
 		ProcessAnalysis(self.listeTCell, self.listeLeukemicCell,self.Analyzer,self.saveFolder)
-		if self.renderStep : self.topLevel.DisplayImage()
+		if self.renderStep : self.topLevel.DisplayImage(self)
+		
 		
 
 		if (not self.renderSuperPosition) & (not self.renderStep):
@@ -76,11 +77,13 @@ class tkinterApp(tk.Tk):
 
 		else: 
 			self.test()
+
 		#if not RUN_FLAG : self.topLevel.DisplayImagesEnd()
 
 
 	def test(self):
 		if not process1.is_alive:
+			print("oui")
 			tk.messagebox.showinfo("Information","analysis is completed")
 			if not self.renderStep : self.topLevel = AnalysisWindow(self)
 			self.topLevel.printLabel(self)
@@ -355,29 +358,31 @@ class AnalysisWindow(tk.Toplevel):
 		
 	def UpdateImage(self,image,row,column,liste):
 		try:
-			try: self.dic["liste"][-1].destroy()
+			try: self.dic[liste][-2].destroy()
 			except : pass
 			img = ImageTk.PhotoImage(Image.open("Processed/"+ image).resize((300, 300)))
 			labelTmp = ttk.Label(self,image = img)
 			labelTmp.Image = img
 			labelTmp.grid(row=row, column = column,padx = 10, pady = 10)
-			self.dic["liste"].append(labelTmp)
+			
+			self.dic[liste].append(labelTmp)
 		except:
 			pass
 
-	def DisplayImage(self):
+	def DisplayImage(self,controller):
 		self.UpdateImage("Step_5_leukemic_cells_center_determination.PNG",0,0,"listeLabel1")
 		self.UpdateImage("Step_7_t_cells_center_determination.PNG",1,0,"listeLabel2")
 		self.UpdateImage("Step_8_cell_superpositioning.PNG",0,1,"listeLabel3")
-		self.UpdateImage("tCellsLast.PNG",1,1,"listeLabel4")
+		if controller.renderSuperPosition:
+			self.UpdateImage("superposed.PNG",1,1,"listeLabel4")
+		self.after(1000,lambda: self.DisplayImage(controller))
 
-		self.after(1000, self.DisplayImage)
-
-	def DisplayImagesEnd(self):
-		self.UpdateImage("Step_5_leukemic_cells_center_determination.PNG",0,0)
-		self.UpdateImage("Step_7_t_cells_center_determination.PNG",1,0)
-		self.UpdateImage("Step_8_cell_superpositioning.PNG",0,1)
-
+	def DisplayImagesEnd(self,controller):
+		self.UpdateImage("Step_5_leukemic_cells_center_determination.PNG",0,0,"listeLabel1")
+		self.UpdateImage("Step_7_t_cells_center_determination.PNG",1,0,"listeLabel2")
+		self.UpdateImage("Step_8_cell_superpositioning.PNG",0,1,"listeLabel3")
+		if controller.renderSuperPosition:
+			self.UpdateImage("superposed.PNG",1,1,"listeLabel4")
 
 def AnalysisExt(listeTCell, listeLeukemicCell,Analyzer,saveFolder):
 	stats = {
