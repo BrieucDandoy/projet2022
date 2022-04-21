@@ -15,9 +15,7 @@ from configparser import ConfigParser
 from utils import getInitDir
 import csv
 LARGEFONT = ("Verdana", 35)
-RUN_FLAG = True
-IMAGE_DISP = True
-import time
+
 from multiprocessing import Process
 import pandas as pd
 
@@ -62,6 +60,8 @@ class tkinterApp(tk.Tk):
 		self.Analyzer.setRenderSteps(self.renderStep)
 
 		if self.renderStep : self.topLevel = AnalysisWindow(self)
+
+
 		ProcessAnalysis(self.listeTCell, self.listeLeukemicCell,self.Analyzer,self.saveFolder)
 		if self.renderStep : self.topLevel.DisplayImage(self)
 		
@@ -75,21 +75,9 @@ class tkinterApp(tk.Tk):
 			if not self.renderStep : self.topLevel = AnalysisWindow(self)
 			self.topLevel.printLabel(self)
 
-		else: 
-			self.test()
-
 		#if not RUN_FLAG : self.topLevel.DisplayImagesEnd()
 
 
-	def test(self):
-		if not process1.is_alive:
-			print("oui")
-			tk.messagebox.showinfo("Information","analysis is completed")
-			if not self.renderStep : self.topLevel = AnalysisWindow(self)
-			self.topLevel.printLabel(self)
-			process1.kill()
-			
-		self.after(1000,self.test)
 
 
 	def ResetImgDir(self):
@@ -336,11 +324,16 @@ class Parameters(tk.Frame):
 class AnalysisWindow(tk.Toplevel):
 	def __init__(self, controller):
 		super().__init__(controller)
-		buttonPlot=ttk.Button(self,text="Plot The number of interaction over time",command=partial(controller.pltGraphOutside,"numberOfinteractions","Number of interaction"))
-		buttonPlot.grid(row=0,column=3, padx=10,pady=10)
+		self.buttonPlot=ttk.Button(self,text="Plot The number of interaction over time",command=partial(controller.pltGraphOutside,"numberOfinteractions","Number of interaction"))
+		self.buttonPlot.grid(row=0,column=3, padx=10,pady=10)
 
-		buttonPlot2=ttk.Button(self,text="Plot the percentage of interaction",command=partial(controller.pltGraphOutside,"pourcentageOfInteractions","pourcentageOfInteractions"))
-		buttonPlot2.grid(row=1,column=3, padx=10,pady=10)
+		self.buttonPlot2=ttk.Button(self,text="Plot the percentage of interaction",command=partial(controller.pltGraphOutside,"pourcentageOfInteractions","pourcentageOfInteractions"))
+		self.buttonPlot2.grid(row=1,column=3, padx=10,pady=10)
+
+		if controller.renderStep | controller.renderSuperPosition :
+			self.buttonStats = ttk.Button(self,text="show statistics",command=partial(self.printLabel,controller)).grid(row=3,column=3,padx=10,pady=10)
+
+
 		self.dic = {
 			"listeLabel1": [],
 			"listeLabel2": [],
@@ -348,11 +341,12 @@ class AnalysisWindow(tk.Toplevel):
 			"listeLabel4": []}
 
 	def printLabel(self,controller):
-		df = pd.read_csv(controller.saveFolder + "Statistics.csv",delimiter=';')
-		ttk.Label(self,text = "Number of interactions : "+ str(df["numberOfinteractions"][len(df["numberOfinteractions"])-1])).grid(row=0,column=4,padx=10,pady=10)
-		ttk.Label(self,text = "Number of LeukemicCells detected : "+str(df["numberOfValidLeukemicCells"][len(df["numberOfValidLeukemicCells"])-1])).grid(row=1,column=4,padx=10,pady=10)
-		ttk.Label(self,text = "Number of T-cells detected : "+str(df["numberOfValidTCells"][len(df["numberOfValidTCells"])-1])).grid(row=2,column=4,padx=10,pady=10)
-		
+		try:
+			df = pd.read_csv(controller.saveFolder + "Statistics.csv",delimiter=';')
+			ttk.Label(self,text = "Number of interactions : "+ str(df["numberOfinteractions"][len(df["numberOfinteractions"])-1])).grid(row=0,column=4,padx=10,pady=10)
+			ttk.Label(self,text = "Number of LeukemicCells detected : "+str(df["numberOfValidLeukemicCells"][len(df["numberOfValidLeukemicCells"])-1])).grid(row=1,column=4,padx=10,pady=10)
+			ttk.Label(self,text = "Number of T-cells detected : "+str(df["numberOfValidTCells"][len(df["numberOfValidTCells"])-1])).grid(row=2,column=4,padx=10,pady=10)
+		except : controller.popup("Error","statistics are not availaible yet")
 		
 
 		
@@ -384,7 +378,7 @@ class AnalysisWindow(tk.Toplevel):
 		if controller.renderSuperPosition:
 			self.UpdateImage("superposed.PNG",1,1,"listeLabel4")
 
-def AnalysisExt(listeTCell, listeLeukemicCell,Analyzer,saveFolder):
+def AnalysisExt(listeTCell, listeLeukemicCell,Analyzer,saveFolder,conn):
 	stats = {
 		"numberOfValidLeukemicCells" : [],
 		"numberOfValidTCells" : [],
@@ -395,7 +389,6 @@ def AnalysisExt(listeTCell, listeLeukemicCell,Analyzer,saveFolder):
 	}
 
 	for imgTcell,imgLcell in zip (listeTCell, listeLeukemicCell):
-		IMAGE_DISP = False
 		interactionPositions, stat = Analyzer.getInteractionArray(imgLcell,imgTcell)
 		stats["numberOfValidLeukemicCells"].append(stat["numberOfValidLeukemicCells"])
 		stats["numberOfValidTCells"].append(stat["numberOfValidTCells"])
@@ -403,12 +396,10 @@ def AnalysisExt(listeTCell, listeLeukemicCell,Analyzer,saveFolder):
 		stats["pourcentageOfValidLeukemicCells"].append(stat["pourcentageOfValidLeukemicCells"])
 		stats["pourcentageOfValidTCells"].append(stat["pourcentageOfValidTCells"])
 		stats["pourcentageOfInteractions"].append(stat["pourcentageOfInteractions"])
-		IMAGE_DISP = True
 	with open (saveFolder + "Statistics.csv" , "w", newline='') as excel:
 		writer = csv.writer (excel, delimiter = ";")
 		writer.writerow(stats.keys())
 		writer.writerows(zip(*stats.values()))
-	RUN_FLAG=True
 
 def ProcessAnalysis(listeTCell, listeLeukemicCell,Analyzer,saveFolder):
 	global process1
