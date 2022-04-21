@@ -1,3 +1,4 @@
+import multiprocessing
 from cx_Freeze import setup, Executable
 base = None
 #entrez "python setup.py build" dans la console pour écécuter
@@ -25,6 +26,10 @@ packages = [
 "PIL",
 "configparser",
 "time",
+"multiprocessing",
+"pandas",
+"csv"
+
 ]
 
 

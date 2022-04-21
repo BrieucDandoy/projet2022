@@ -1,5 +1,3 @@
-from asyncio.subprocess import Process
-from multiprocessing.pool import RUN
 from pstats import Stats
 from re import L, S
 import tkinter as tk
