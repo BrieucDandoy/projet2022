@@ -3,18 +3,10 @@ from multiprocessing.pool import RUN
 from pstats import Stats
 from re import L, S
 import tkinter as tk
-from tkinter import Frame, Toplevel, mainloop, ttk
+from tkinter import ttk
 from tkinter import filedialog
 import os
-import matplotlib
-matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
-from matplotlib.figure import Figure
-import matplotlib.image as mpimg
-from matplotlib.backends.backend_tkagg import (
-    FigureCanvasTkAgg,
-    NavigationToolbar2Tk
-)
 import numpy as np
 from functools import partial
 from cellPresenceDetermination import Analyser
@@ -72,12 +64,30 @@ class tkinterApp(tk.Tk):
 		if self.renderStep : self.topLevel = AnalysisWindow(self)
 		ProcessAnalysis(self.listeTCell, self.listeLeukemicCell,self.Analyzer,self.saveFolder)
 		if self.renderStep : self.topLevel.DisplayImage()
-		tk.messagebox.showinfo("Information", "Analysis is running a message will appear when it's over, it might takes some time")
-		process1.join()
-		tk.messagebox.showinfo("Information","analysis is completed")
-		if not self.renderStep : self.topLevel = AnalysisWindow(self)
-		self.topLevel.printLabel(self)
+		
+
+		if (not self.renderSuperPosition) & (not self.renderStep):
+			tk.messagebox.showinfo("Information", "Analysis is running a message will appear when it's over, it might takes some time")
+			process1.join() #crash l'interface pendant l'analyse des images, pas possbile d'utilisé pour afficher les images
+			
+			tk.messagebox.showinfo("Information","analysis is completed")
+			if not self.renderStep : self.topLevel = AnalysisWindow(self)
+			self.topLevel.printLabel(self)
+
+		else: 
+			self.test()
 		#if not RUN_FLAG : self.topLevel.DisplayImagesEnd()
+
+
+	def test(self):
+		if not process1.is_alive:
+			tk.messagebox.showinfo("Information","analysis is completed")
+			if not self.renderStep : self.topLevel = AnalysisWindow(self)
+			self.topLevel.printLabel(self)
+			process1.kill()
+			
+		self.after(1000,self.test)
+
 
 	def ResetImgDir(self):
 		self.folderBrightfield = ""
@@ -95,16 +105,6 @@ class tkinterApp(tk.Tk):
 	def changeSaveFolder(self,text):
 		self.saveFolder = filedialog.askdirectory (initialdir = "/",title = "Selectionner un dossier")
 		text.insert(tk.INSERT, self.saveFolder)
-
-	def plotGraphInside(self,x,y,title,win):
-
-		figure = Figure(figsize=(3, 3), dpi=100)
-		plot = figure.add_subplot(1, 1, 1)
-		plot.plot(x, y)
-		plt.title(title)
-		canvas = FigureCanvasTkAgg(figure, win)
-		canvas.get_tk_widget().grid(row=0, column=0)
-
 
 
 
@@ -338,8 +338,12 @@ class AnalysisWindow(tk.Toplevel):
 
 		buttonPlot2=ttk.Button(self,text="Plot the percentage of interaction",command=partial(controller.pltGraphOutside,"pourcentageOfInteractions","pourcentageOfInteractions"))
 		buttonPlot2.grid(row=1,column=3, padx=10,pady=10)
+		self.dic = {
+			"listeLabel1": [],
+			"listeLabel2": [],
+			"listeLabel3": [],
+			"listeLabel4": []}
 
-		
 	def printLabel(self,controller):
 		df = pd.read_csv(controller.saveFolder + "Statistics.csv",delimiter=';')
 		ttk.Label(self,text = "Number of interactions : "+ str(df["numberOfinteractions"][len(df["numberOfinteractions"])-1])).grid(row=0,column=4,padx=10,pady=10)
@@ -349,27 +353,31 @@ class AnalysisWindow(tk.Toplevel):
 		
 
 		
-	def UpdateImage(self,image,row,column):
+	def UpdateImage(self,image,row,column,liste):
 		try:
-			img = ImageTk.PhotoImage(Image.open("Processed/"+ image).resize((500, 500)))
+			try: self.dic["liste"][-1].destroy()
+			except : pass
+			img = ImageTk.PhotoImage(Image.open("Processed/"+ image).resize((300, 300)))
 			labelTmp = ttk.Label(self,image = img)
 			labelTmp.Image = img
 			labelTmp.grid(row=row, column = column,padx = 10, pady = 10)
+			self.dic["liste"].append(labelTmp)
 		except:
 			pass
 
 	def DisplayImage(self):
-		if IMAGE_DISP:
-			self.UpdateImage("Step_5_leukemic_cells_center_determination.PNG",0,0)
-			self.UpdateImage("Step_7_t_cells_center_determination.PNG",1,0)
-			#self.UpdateImage("Step_8_cell_superpositioning.PNG",0,1)
-			#self.UpdateImage()
-		self.after(10, self.DisplayImage)
+		self.UpdateImage("Step_5_leukemic_cells_center_determination.PNG",0,0,"listeLabel1")
+		self.UpdateImage("Step_7_t_cells_center_determination.PNG",1,0,"listeLabel2")
+		self.UpdateImage("Step_8_cell_superpositioning.PNG",0,1,"listeLabel3")
+		self.UpdateImage("tCellsLast.PNG",1,1,"listeLabel4")
+
+		self.after(1000, self.DisplayImage)
 
 	def DisplayImagesEnd(self):
 		self.UpdateImage("Step_5_leukemic_cells_center_determination.PNG",0,0)
 		self.UpdateImage("Step_7_t_cells_center_determination.PNG",1,0)
 		self.UpdateImage("Step_8_cell_superpositioning.PNG",0,1)
+
 
 def AnalysisExt(listeTCell, listeLeukemicCell,Analyzer,saveFolder):
 	stats = {
@@ -395,7 +403,7 @@ def AnalysisExt(listeTCell, listeLeukemicCell,Analyzer,saveFolder):
 		writer = csv.writer (excel, delimiter = ";")
 		writer.writerow(stats.keys())
 		writer.writerows(zip(*stats.values()))
-	RUN_FLAG=False
+	RUN_FLAG=True
 
 def ProcessAnalysis(listeTCell, listeLeukemicCell,Analyzer,saveFolder):
 	global process1
